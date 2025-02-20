@@ -1,8 +1,10 @@
 import React from 'react';
 import CustomLineChart from "./app/custom-chart";
+import {DataPoint} from "@/app/types/datapoint.interface";
+import './index.css';
 
 const App = () => {
-  const chartData = [
+  const chartData: DataPoint[] = [
     { name: 'Page A', uv: 4000, pv: 2400, amt: 2400 },
     { name: 'Page B', uv: 3000, pv: 1398, amt: 2210 },
     { name: 'Page C', uv: 2000, pv: 9800, amt: 2290 },
@@ -13,8 +15,9 @@ const App = () => {
   ];
 
   return (
-      <div style={{ width: '100%', height: '500px' }}>
-        <CustomLineChart data={chartData} />
+      <div style={{width: '100%', height: '500px'}}>
+        <h1>Анализ данных</h1>
+        <CustomLineChart data={chartData}/>
       </div>
   );
 };

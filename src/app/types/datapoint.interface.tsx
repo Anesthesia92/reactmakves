@@ -1,8 +1,6 @@
-interface DataPoint {
+export interface DataPoint {
     name: string;
-    uv: number;
     pv: number;
+    uv: number;
     amt: number;
-    z_pv?: number;
-    z_uv?: number;
 }

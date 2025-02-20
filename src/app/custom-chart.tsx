@@ -1,122 +1,139 @@
-import React, { PureComponent } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import React, {JSX, PureComponent} from 'react';
+import {
+    LineChart,
+    Line,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    Legend,
+    ResponsiveContainer,
+    Dot
+} from 'recharts';
 
-interface ChartProps {
+import {DataPoint} from "@/app/types/datapoint.interface";
+
+interface CustomLineChartProps {
     data: DataPoint[];
 }
 
-interface ChartState {
-    processedData: DataPoint[];
+// interface CustomLineChartState {
+//     zScoresPv: number[];
+//     zScoresUv: number[];
+// }
+
+interface ZScores {
+    pv: number[];
+    uv: number[];
 }
 
-const calculateZScores = (data: DataPoint[], key: keyof DataPoint): DataPoint[] => {
-    const values = data.map(d => d[key] as number);
-    const mean = values.reduce((a, b) => a + b, 0) / values.length;
-    const stdDev = Math.sqrt(values.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / values.length);
-
-    return data.map(d => ({
-        ...d,
-        [`z_${key}`]: stdDev !== 0 ? (d[key] as number - mean) / stdDev : 0
-    }));
-};
-
-export default class CustomLineChart extends PureComponent<ChartProps, ChartState> {
-    constructor(props: ChartProps) {
+class CustomLineChart extends PureComponent<CustomLineChartProps, { zScores: ZScores }> {
+    constructor(props: CustomLineChartProps) {
         super(props);
         this.state = {
-            processedData: this.processData(props.data)
+            zScores: { pv: [], uv: [] }
         };
     }
 
-    componentDidUpdate(prevProps: ChartProps) {
+    componentDidMount() {
+        this.calculateZScores();
+    }
+
+    componentDidUpdate(prevProps: CustomLineChartProps) {
         if (prevProps.data !== this.props.data) {
-            this.setState({ processedData: this.processData(this.props.data) });
+            this.calculateZScores();
         }
     }
-    componentDidMount() {
-        console.log('Processed Data:', this.state.processedData);
-    }
 
-    processData = (data: DataPoint[]) => {
-        let processed = calculateZScores(data, 'pv');
-        processed = calculateZScores(processed, 'uv');
-        return processed;
+    calculateZScores = () => {
+        const { data } = this.props;
+
+        const calculate = (key: keyof ZScores) => {
+            const values = data.map(d => d[key]);
+            const mean = values.reduce((sum, val) => sum + val, 0) / values.length;
+            const stdDev = Math.sqrt(values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / values.length);
+            return values.map(val => (val - mean) / stdDev);
+        };
+
+        this.setState({
+            zScores: {
+                pv: calculate('pv'),
+                uv: calculate('uv')
+            }
+        });
     };
 
-    renderLine = (dataKey: keyof DataPoint, color: string) => {
-        const { processedData } = this.state;
-        const zKey = `z_${dataKey}` as keyof DataPoint;
+    renderSegments = (dataKey: keyof ZScores) => {
+        const segments: JSX.Element[] = [];
+        let segmentStart: number | null = null;
 
-        if (!processedData?.length) return null;
+        this.state.zScores[dataKey].forEach((z, index) => {
+            console.log(this.state.zScores, dataKey, z, segmentStart);
+            if (Math.abs(z) > 1) {
+                if (segmentStart === null) segmentStart = index;
+            } else if (segmentStart !== null) {
+                segments.push(this.renderSegment(dataKey, segmentStart, index - 1));
+                segmentStart = null;
+            }
+        });
 
-        return (
-            <>
-                <Line
-                    type="monotone"
-                    dataKey={dataKey}
-                    stroke={color}
-                    strokeWidth={2}
-                    dot={false}
-                    activeDot={false}
-                />
+        if (segmentStart !== null) {
+            if(segments.find())
+            segments.push(this.renderSegment(dataKey, segmentStart, this.props.data.length - 1));
+        }
 
-                {processedData.slice(0, -1).map((point, index) => {
-                    const nextPoint = processedData[index + 1];
-                    const currentZ = point[zKey] as number;
-                    const nextZ = nextPoint[zKey] as number;
-
-                    return Math.abs(currentZ) > 1 || Math.abs(nextZ) > 1 ? (
-                        <Line
-                            key={`${dataKey}-segment-${index}`}
-                            data={[point, nextPoint]}
-                            type="monotone"
-                            dataKey={dataKey}
-                            stroke="red"
-                            strokeWidth={2}
-                            dot={false}
-                            connectNulls
-                        />
-                    ) : null;
-                })}
-
-                {processedData.map((point, index) => (
-                    <Line
-                        key={`${dataKey}-dot-${index}`}
-                        data={[point]}
-                        type="monotone"
-                        dataKey={dataKey}
-                        stroke="none"
-                        dot={{
-                            fill: Math.abs(point[zKey] as number) > 1 ? 'red' : color,
-                            r: 5,
-                            strokeWidth: 2
-                        }}
-                    />
-                ))}
-            </>
-        );
+        console.log(segments);
+        return segments;
     };
+
+    renderSegment = (dataKey: keyof ZScores, start: number, end: number) => (
+        <Line
+            key={`${dataKey}-segment-${start}-${end}`}
+            dataKey={dataKey}
+            data={this.props.data.slice(start, end + 1)}
+            stroke="red"
+            strokeWidth={2}
+            dot={false}
+        />
+    );
+
+    renderDot = (dataKey: keyof ZScores, color: string) =>
+        ({ index, cx, cy }: { index: number; cx?: number; cy?: number }) => {
+            const z = this.state.zScores[dataKey][index];
+            const dotColor = Math.abs(z) > 1 ? 'red' : color;
+
+            return <Dot cx={cx} cy={cy} fill={dotColor} stroke="transparent" r={5} />;
+        };
+
+    renderLine = (dataKey: keyof ZScores, color: string) => (
+        <Line
+            type="monotone"
+            dataKey={dataKey}
+            stroke={color}
+            dot={this.renderDot(dataKey, color)}
+            activeDot={{ r: 8 }}
+        />
+    );
 
     render() {
-        const { processedData } = this.state;
-
-        if (!processedData.length) return <div>Loading...</div>;
-
         return (
-            <ResponsiveContainer width="100%" height="100%">
-                <LineChart
-                    data={processedData}
-                    margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                >
+            <ResponsiveContainer width="100%" height={400}>
+                <LineChart data={this.props.data} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" />
                     <YAxis />
                     <Tooltip />
                     <Legend />
+
                     {this.renderLine('pv', '#8884d8')}
                     {this.renderLine('uv', '#82ca9d')}
+
+                    {(['pv', 'uv'] as const).map(key => this.renderSegments(key))}
+
                 </LineChart>
             </ResponsiveContainer>
         );
     }
 }
+
+export default CustomLineChart;
