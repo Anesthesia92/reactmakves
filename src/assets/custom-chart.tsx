@@ -90,7 +90,6 @@ class CustomLineChart extends PureComponent<
             segments.push(this.renderSegment(dataKey, segmentStart, this.props.data.length - 1));
         }
 
-        console.log(segments);
         return segments;
     };
 
@@ -117,6 +116,7 @@ class CustomLineChart extends PureComponent<
         <Line
             type="monotone"
             dataKey={dataKey}
+            key={`${dataKey}-line-${color}`}
             stroke={color}
             dot={this.renderDot(dataKey, color)}
             activeDot={{r: 8}}
