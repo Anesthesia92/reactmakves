@@ -1,7 +1,5 @@
-import React from 'react';
-import CustomLineChart from "./app/custom-chart";
-import {DataPoint} from "@/app/types/datapoint.interface";
-import './index.css';
+import {DataPoint} from "./assets/types/datapoint.interface.tsx";
+import CustomLineChart from "./assets/custom-chart.tsx";
 
 const App = () => {
   const chartData: DataPoint[] = [

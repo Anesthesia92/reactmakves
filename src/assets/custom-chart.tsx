@@ -1,4 +1,4 @@
-import React, {JSX, PureComponent} from 'react';
+import {JSX, PureComponent} from 'react';
 import {
     LineChart,
     Line,
@@ -11,27 +11,36 @@ import {
     Dot
 } from 'recharts';
 
-import {DataPoint} from "@/app/types/datapoint.interface";
+import {DataPoint} from "./types/datapoint.interface";
 
 interface CustomLineChartProps {
     data: DataPoint[];
 }
 
-// interface CustomLineChartState {
-//     zScoresPv: number[];
-//     zScoresUv: number[];
-// }
+interface CustomLineChartState {
+    zScores: {
+        uv: number[];
+        pv: number[];
+    };
+}
 
 interface ZScores {
     pv: number[];
     uv: number[];
 }
 
-class CustomLineChart extends PureComponent<CustomLineChartProps, { zScores: ZScores }> {
+class CustomLineChart extends PureComponent<
+    CustomLineChartProps,
+    CustomLineChartState // Указание типа состояния
+> {
     constructor(props: CustomLineChartProps) {
+
         super(props);
         this.state = {
-            zScores: { pv: [], uv: [] }
+            zScores: {
+                uv: [],
+                pv: []
+            }
         };
     }
 
@@ -46,7 +55,7 @@ class CustomLineChart extends PureComponent<CustomLineChartProps, { zScores: ZSc
     }
 
     calculateZScores = () => {
-        const { data } = this.props;
+        const {data} = this.props;
 
         const calculate = (key: keyof ZScores) => {
             const values = data.map(d => d[key]);
@@ -78,7 +87,6 @@ class CustomLineChart extends PureComponent<CustomLineChartProps, { zScores: ZSc
         });
 
         if (segmentStart !== null) {
-            if(segments.find())
             segments.push(this.renderSegment(dataKey, segmentStart, this.props.data.length - 1));
         }
 
@@ -94,15 +102,15 @@ class CustomLineChart extends PureComponent<CustomLineChartProps, { zScores: ZSc
             stroke="red"
             strokeWidth={2}
             dot={false}
-        />
+        ></Line>
     );
 
     renderDot = (dataKey: keyof ZScores, color: string) =>
-        ({ index, cx, cy }: { index: number; cx?: number; cy?: number }) => {
+        ({index, cx, cy}: { index: number; cx?: number; cy?: number }) => {
             const z = this.state.zScores[dataKey][index];
             const dotColor = Math.abs(z) > 1 ? 'red' : color;
 
-            return <Dot cx={cx} cy={cy} fill={dotColor} stroke="transparent" r={5} />;
+            return <Dot cx={cx} cy={cy} fill={dotColor} stroke="transparent" r={5}/>;
         };
 
     renderLine = (dataKey: keyof ZScores, color: string) => (
@@ -111,19 +119,19 @@ class CustomLineChart extends PureComponent<CustomLineChartProps, { zScores: ZSc
             dataKey={dataKey}
             stroke={color}
             dot={this.renderDot(dataKey, color)}
-            activeDot={{ r: 8 }}
+            activeDot={{r: 8}}
         />
     );
 
     render() {
         return (
             <ResponsiveContainer width="100%" height={400}>
-                <LineChart data={this.props.data} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
+                <LineChart data={this.props.data} margin={{top: 20, right: 30, left: 20, bottom: 20}}>
+                    <CartesianGrid strokeDasharray="3 3"/>
+                    <XAxis dataKey="name"/>
+                    <YAxis/>
+                    <Tooltip/>
+                    <Legend/>
 
                     {this.renderLine('pv', '#8884d8')}
                     {this.renderLine('uv', '#82ca9d')}
